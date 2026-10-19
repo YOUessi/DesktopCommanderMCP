@@ -27,6 +27,9 @@ export const ComputerClickArgsSchema = z.object({
 export const ComputerTypeArgsSchema = z.object({
   ...observed,
   text: z.string().min(1).max(2000),
+  // Optional screenshot-space target: click immediately before typing, in the
+  // SAME bridge process. Avoids focus loss between separate tool calls.
+  x: coordinate.optional(), y: coordinate.optional(),
   ...afterAction,
 });
 export const ComputerKeyArgsSchema = z.object({
@@ -71,7 +74,7 @@ const definitions: Array<{
   { name: 'computer_click', readOnly: false,
     description: 'Click at x/y in the latest screenshot, using its screenshot_id. Requires explicit opt-in and an observed desktop. Supports single/double and left/right/middle click. Returns a fresh screenshot by default.' },
   { name: 'computer_type', readOnly: false,
-    description: 'Type text into the focused desktop application, bound to a recent screenshot_id. Non-ASCII text may use the system clipboard; do not use for passwords or other secrets. Returns fresh screenshot by default.' },
+    description: 'Type text into the focused desktop application. Optionally provide x and y from a recent screenshot to click/focus the target immediately before typing within one action (recommended). Non-ASCII may replace the plain-text system clipboard temporarily; do not use for passwords or secrets. Returns fresh screenshot by default.' },
   { name: 'computer_key', readOnly: false,
     description: 'Press a keyboard shortcut (e.g. ["command","l"] on Mac, ["ctrl","l"] on Linux). Requires recent screenshot_id. Returns fresh screenshot by default.' },
   { name: 'computer_scroll', readOnly: false,
