@@ -2,7 +2,7 @@
 
 本目录为 **YOUessi/DesktopCommanderMCP** 的自用 Computer Use 扩展设计与安装说明。保留原版 Desktop Commander 的文件、终端、进程工具；新增可观察桌面截图和有限的鼠标键盘操作。基于原仓库的 MIT 许可证。
 
-> 状态：已经实现 MCP 工具和模拟驱动单元测试；**模拟测试通过；Mac 真实截图与鼠标点击已验证，键盘输入闭环继续验收；Tang 尚未验证**。Linux Wayland、多显示器、锁屏/无 GUI、任意浏览器 DOM、GUI 密码输入、原生 macOS 窗口焦点控制不属于当前实现。
+> 状态：已经实现 MCP 工具和模拟驱动单元测试；**模拟测试和 Mac 主屏真实截图→点击→键盘输入闭环均通过；Tang 尚未验证**。Linux Wayland、多显示器、锁屏/无 GUI、任意浏览器 DOM、GUI 密码输入、原生 macOS 窗口焦点控制不属于当前实现。
 
 ## 功能与架构
 
@@ -40,7 +40,9 @@
 
 `computer_screenshot` 返回一张最多 1280×1000（默认）等比例缩放的 JPEG、截图编号和图片宽高。**后续鼠标坐标必须取自这张图片本身，而不是 macOS 的逻辑点或原始 Retina 像素。** MCP 层根据主屏幕逻辑尺寸自动换算，处理多数 Retina 缩放情形。
 
-**输入文字时，优先在 `computer_type` 同时指定输入框对应的截图像素 `x`、`y`，该工具会在同一 Python 进程内先聚焦再输入，避免窗口焦点因截图/启动新进程而丢失。**\n\n每次输入都必须携带 `screenshot_id`；截图最多有效 120 秒，单次动作后立即作废。动作默认附带新的截图和新的编号，因此可以继续下一步。若动作超时/截图失败，状态可能不确定，**先重新截图核实，不要重复点提交/删除**。所有 GUI 事件在本 MCP 进程内串行执行；屏幕 ID 不跨进程持久化。
+**输入文字时，优先在 `computer_type` 同时指定输入框对应的截图像素 `x`、`y`，该工具会在同一 Python 进程内先聚焦再输入，避免窗口焦点因截图/启动新进程而丢失。**
+
+每次输入都必须携带 `screenshot_id`；截图最多有效 120 秒，单次动作后立即作废。动作默认附带新的截图和新的编号，因此可以继续下一步。若动作超时/截图失败，状态可能不确定，**先重新截图核实，不要重复点提交/删除**。所有 GUI 事件在本 MCP 进程内串行执行；屏幕 ID 不跨进程持久化。
 
 ## 安装：macOS（建议首先在 MacBook Air 验证）
 
@@ -79,6 +81,17 @@ DC_COMPUTER_PYTHON = "/绝对路径/DesktopCommanderMCP/.venv-computer/bin/pytho
 如果要首先只验证截图，可暂时去掉 `DC_COMPUTER_INPUT`。客户端重连后，先调用 `computer_screen_info`、`computer_screenshot`。必须亲眼确认画面正确，再在**非敏感测试窗口**尝试点击。
 
 **注意：** Mac 的中文/日文输入法可能将常规模拟按键留在候选/组合状态；本扩展对可打印 ASCII 采用 Quartz Unicode 键盘事件直接提交，对中文、emoji、多行文字等使用系统**纯文本剪贴板临时替换并恢复**。后者会损失原剪贴板的富文本/图片格式，且存在与其他程序的剪贴板竞争。带坐标的 `computer_type` 在 macOS 上会核对点击坐标下的窗口所有者是否成为前台应用，否则拒绝发出键盘输入，以防误输到其他窗口。不要用它输入密码、令牌或其他秘密。
+
+### Mac 一键真实桌面验收
+
+下面的测试会自动创建**独立临时 Tk 窗口**，通过真正的 MCP 服务截图、点击窗口中的按钮，再在专用文本框输入 `DC-TYPE-AT-OK` 并核对结果。结束后会关闭窗口，不会修改你的项目文件或保存屏幕截图。运行时电脑需处于解锁的桌面会话，且窗口必须位于**主屏幕**内：
+
+```bash
+cd ~/Documents/DesktopCommanderMCP
+DC_COMPUTER_PYTHON="$HOME/.venv-computer/bin/python" npm run test:computer:live
+```
+
+预期末行包含 `REAL_COMPUTER_USE_GUI_PASS`；否则根据输出诊断 macOS 系统权限、窗口前台状态、显示器及输入法。**该命令是真实鼠标和键盘操作，不要在你正在操作重要程序时同时执行。** `npm run test:computer` 仅执行模拟测试和真实 MCP 工具枚举，并包含 Python 语法检查，不会点击实际桌面。
 
 ## 安装：Linux（Tang）
 
@@ -121,7 +134,7 @@ Linux Python 程序需有当前 GUI 会话可用的 `DISPLAY` 和 Xauthority 权
 
 ## 验收清单
 
-1. `npm run build` 无 TypeScript 报错；`node --test test/test-computer-use.js` 通过。
+1. `npm run test:computer` 无 TypeScript/Python 语法报错，且模拟测试和 MCP 工具注册检查全部通过。
 2. 两个开关均关闭时，新工具不对外暴露。
 3. 只启用 `DC_COMPUTER_USE` 时可截图，但不能点击。
 4. Mac 截图尺寸/Retina 坐标换算正确，展示主屏幕真实画面。
