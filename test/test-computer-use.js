@@ -90,6 +90,25 @@ test('no desktop input without separate opt-in', async () => {
   assert.equal(f.calls.length, 1);
 });
 
+test('positioned computer_type focuses input in the same bridge call', async () => {
+  process.env.DC_COMPUTER_USE = '1';
+  process.env.DC_COMPUTER_INPUT = '1';
+  const f = makeFixture();
+  const shot = await f.controller.run('computer_screenshot', {});
+  const id = shot.structuredContent.screenshot_id;
+  const missingY = await f.controller.run('computer_type', {
+    screenshot_id: id, x: 200, text: 'test', return_screenshot: false,
+  });
+  assert.equal(missingY.isError, true);
+  assert.equal(f.calls.length, 1);
+
+  const result = await f.controller.run('computer_type', {
+    screenshot_id: id, x: 320, y: 160, text: 'hello', return_screenshot: false,
+  });
+  assert.equal(result.isError, undefined);
+  assert.deepEqual(f.calls[1], { action: 'type', x: 250, y: 125, text: 'hello' });
+});
+
 test('expires screenshots and rejects out-of-bounds coordinates', async () => {
   process.env.DC_COMPUTER_USE = '1';
   process.env.DC_COMPUTER_INPUT = '1';
