@@ -1,6 +1,9 @@
 # Desktop Commander MCP
 ### Search, update, manage files and run terminal commands with AI
 
+> **This fork adds experimental Computer Use tools** (screen capture, clicks, keyboard, scroll, drag) as **opt-in** local MCP functionality. Existing Desktop Commander capabilities remain intact. See [Computer Use setup and security guide](docs/COMPUTER_USE.md). The GUI controls are disabled by default; real desktop acceptance tests are still required. This is not an independent Remote MCP hosting service.
+
+
 [![npm downloads](https://img.shields.io/npm/dw/@wonderwhy-er/desktop-commander)](https://www.npmjs.com/package/@wonderwhy-er/desktop-commander)
 [![AgentAudit Verified](https://agentaudit.dev/api/badge/desktop-commander)](https://agentaudit.dev/skills/desktop-commander)
 [![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/wonderwhy-er/DesktopCommanderMCP)](https://archestra.ai/mcp-catalog/wonderwhy-er__desktopcommandermcp)
