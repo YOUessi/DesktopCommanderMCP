@@ -85,7 +85,7 @@ export const computerToolDefinitions = definitions.map(({ name, description, rea
   description,
   inputSchema: zodToJsonSchema(computerToolArgSchemas[name]),
   annotations: {
-    title: name.replaceAll('_', ' '),
+    title: name.replace(/_/g, ' '),
     readOnlyHint: readOnly,
     destructiveHint: !readOnly,
     openWorldHint: false,
