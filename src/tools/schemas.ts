@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { computerToolArgSchemas } from "./computer-schemas.js";
 
 // Config tools schemas
 export const GetConfigArgsSchema = z.object({
@@ -249,6 +250,7 @@ export const TrackUiEventArgsSchema = z.object({
  * with the tool definitions in server.ts.
  */
 export const toolArgSchemas: Record<string, z.ZodTypeAny> = {
+  ...computerToolArgSchemas,
   get_config: GetConfigArgsSchema,
   set_config_value: SetConfigValueArgsSchema,
   read_file: ReadFileArgsSchema,
