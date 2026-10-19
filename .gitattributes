@@ -1,0 +1,3 @@
+# Keep large demonstration media in Git history, but out of downloadable source archives.
+# This does not affect git clone, npm builds, or repository contents.
+1080_60.mp4 export-ignore

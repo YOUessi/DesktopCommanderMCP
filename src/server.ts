@@ -65,6 +65,8 @@ import {
     buildUnsupportedParamsWarning,
 } from './utils/unsupportedParams.js';
 import { getConfig, setConfigValue } from './tools/config.js';
+import { computerToolDefinitions, type ComputerToolName } from './tools/computer-schemas.js';
+import { handleComputerTool } from './tools/computer.js';
 import { getUsageStats } from './tools/usage.js';
 import { giveFeedbackToDesktopCommander } from './tools/feedback.js';
 import { trackToolCall } from './utils/trackTools.js';
@@ -310,6 +312,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 
         // Build complete tools array
         const allTools = [
+            // GUI tools are absent unless the operator deliberately enables them.
+            ...(process.env.DC_COMPUTER_USE === '1' ? computerToolDefinitions : []),
             // Configuration tools
             {
                 name: "get_config",
@@ -1247,13 +1251,27 @@ async function handleCallToolRequest(request: CallToolRequest): Promise<ServerRe
         }
 
 
-        // Track tool call
-        trackToolCall(name, args);
+        // Do not store typed user text in local argument logs.
+        const privacySafeArgs = name === 'computer_type' && args && typeof args === 'object'
+            ? { ...args, text: '[REDACTED]' } : args;
+        trackToolCall(name, privacySafeArgs);
 
         // Using a more structured approach with dedicated handlers
         // (result is declared above so the finally block can read execution status)
 
         switch (name) {
+            // Computer Use is opt-in and its mutations also require DC_COMPUTER_INPUT=1.
+            case "computer_screenshot":
+            case "computer_screen_info":
+            case "computer_list_windows":
+            case "computer_click":
+            case "computer_type":
+            case "computer_key":
+            case "computer_scroll":
+            case "computer_drag":
+                result = await handleComputerTool(name as ComputerToolName, args);
+                break;
+
             // Config tools
             case "get_config":
                 try {
@@ -1436,7 +1454,13 @@ async function handleCallToolRequest(request: CallToolRequest): Promise<ServerRe
         ];
 
         if (!EXCLUDED_TOOLS.includes(name)) {
-            toolHistory.addCall(name, args, result, duration);
+            // Screenshot images are never persisted in tool-history.jsonl.
+            const historySafeResult = name.startsWith('computer_')
+                ? { ...result, content: result.content.map(item => item.type === 'image'
+                    ? { type: 'text', text: '[GUI screenshot omitted from local history]' } : item),
+                    structuredContent: undefined }
+                : result;
+            toolHistory.addCall(name, privacySafeArgs, historySafeResult, duration);
         }
 
         // Track success or failure based on result
