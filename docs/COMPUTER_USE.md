@@ -58,7 +58,7 @@ python3 -m venv .venv-computer
 .venv-computer/bin/python -m pip install pyautogui pillow
 
 # 测试（无需操作真实桌面）
-node --test test/test-computer-use.js
+npm run test:computer
 ```
 
 系统设置 → 隐私与安全性中，授权启动 MCP 的终端/应用及相关 Python 进程：**屏幕与系统音频录制（Screen Recording）**、**辅助功能（Accessibility）**。在 Mac 上请使用真实登录的桌面会话；电脑锁屏、用户会话退出或休眠时 Computer Use 不保证可用。
