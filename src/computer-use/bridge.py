@@ -47,7 +47,56 @@ def clipboard_command(platform_name: str):
     raise RuntimeError("Unicode paste currently supports macOS and Linux X11 only")
 
 
-def write_text(gui, text: str) -> None:
+def require_target_app_frontmost(x: int, y: int) -> int:
+    """Fail closed if clicking a target did not activate its owning app.
+
+    Synthetic macOS mouse clicks can hit non-activating floating windows while
+    keyboard events still go to another foreground application. Determine the
+    frontmost visible *normal window* beneath the screenshot point, and verify
+    the application's PID is the system's active application before typing.
+    """
+    if platform.system() != "Darwin":
+        return 0
+    import AppKit
+    import Quartz
+
+    active = AppKit.NSWorkspace.sharedWorkspace().frontmostApplication()
+    if active is None:
+        raise RuntimeError("No foreground macOS application; refusing to type")
+    pid = int(active.processIdentifier())
+    owner_pid = None
+    for window in Quartz.CGWindowListCopyWindowInfo(
+            Quartz.kCGWindowListOptionOnScreenOnly, Quartz.kCGNullWindowID):
+        level = int(window.get("kCGWindowLayer", -1))
+        if level < 0 or level >= 20 or float(window.get("kCGWindowAlpha", 1)) <= 0:
+            continue
+        bounds = window.get("kCGWindowBounds") or {}
+        left, top = bounds.get("X"), bounds.get("Y")
+        width, height = bounds.get("Width"), bounds.get("Height")
+        if all(v is not None for v in (left, top, width, height)):
+            if left <= x < left + width and top <= y < top + height:
+                owner_pid = int(window.get("kCGWindowOwnerPID", 0))
+                break
+    if owner_pid is None or owner_pid <= 0:
+        raise RuntimeError("Could not identify the visible target window; text not sent")
+    if pid != owner_pid:
+        raise RuntimeError(
+            "The target window is not the foreground application. "
+            "Activate its normal window first, then rescreenshot and retry; text not sent."
+        )
+    return owner_pid
+
+
+def ensure_foreground(pid: int) -> None:
+    if pid and platform.system() == "Darwin":
+        from AppKit import NSWorkspace
+        active = NSWorkspace.sharedWorkspace().frontmostApplication()
+        if active is None or int(active.processIdentifier()) != pid:
+            raise RuntimeError("Foreground application changed during typing; stopped")
+
+
+def write_text(gui, text: str, expected_pid: int = 0) -> None:
+    ensure_foreground(expected_pid)
     if platform.system() == "Darwin" and all(32 <= ord(char) <= 126 for char in text):
         # macOS IMEs can hold PyAutoGUI.write() keycodes as uncommitted text until
         # Return is pressed. Post explicit Unicode key events instead: they reach
@@ -75,7 +124,7 @@ def write_text(gui, text: str) -> None:
     old = subprocess.run(read_cmd, capture_output=True, check=True, timeout=4).stdout
     try:
         subprocess.run(write_cmd, input=text.encode("utf-8"), check=True, timeout=4)
-        gui.hotkey(*paste_keys)
+        ensure_foreground(expected_pid)\n        gui.hotkey(*paste_keys)
         time.sleep(0.25)
     finally:
         subprocess.run(write_cmd, input=old, check=True, timeout=4)
@@ -157,10 +206,13 @@ def main():
         # between separate screenshot/click/type calls on macOS desktops.
         if ("x" in payload) != ("y" in payload):
             raise ValueError("Both x and y are required when targeting text")
+        expected_pid = 0
         if "x" in payload:
-            gui.click(x=int(payload["x"]), y=int(payload["y"]))
-            time.sleep(0.15)
-        write_text(gui, str(payload["text"]))
+            x, y = int(payload["x"]), int(payload["y"])
+            gui.click(x=x, y=y)
+            time.sleep(0.25)
+            expected_pid = require_target_app_frontmost(x, y)
+        write_text(gui, str(payload["text"]), expected_pid)
     elif action == "key":
         aliases = {"cmd": "command", "control": "ctrl", "option": "alt",
                    "escape": "esc", "return": "enter", "super": "win"}
