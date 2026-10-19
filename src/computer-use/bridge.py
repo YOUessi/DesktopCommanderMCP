@@ -136,6 +136,13 @@ def main():
                   clicks=int(payload.get("clicks", 1)), interval=0.12,
                   button=payload.get("button", "left"))
     elif action == "type":
+        # Focusing and typing in one native process prevents focus from moving
+        # between separate screenshot/click/type calls on macOS desktops.
+        if ("x" in payload) != ("y" in payload):
+            raise ValueError("Both x and y are required when targeting text")
+        if "x" in payload:
+            gui.click(x=int(payload["x"]), y=int(payload["y"]))
+            time.sleep(0.15)
         write_text(gui, str(payload["text"]))
     elif action == "key":
         aliases = {"cmd": "command", "control": "ctrl", "option": "alt",
