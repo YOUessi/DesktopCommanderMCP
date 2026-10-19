@@ -2,7 +2,7 @@
 
 本目录为 **YOUessi/DesktopCommanderMCP** 的自用 Computer Use 扩展设计与安装说明。保留原版 Desktop Commander 的文件、终端、进程工具；新增可观察桌面截图和有限的鼠标键盘操作。基于原仓库的 MIT 许可证。
 
-> 状态：已经实现 MCP 工具和模拟驱动单元测试；**尚未在真实 Mac/Tang 桌面完成验收**。Linux Wayland、多显示器、锁屏/无 GUI、任意浏览器 DOM、GUI 密码输入、原生 macOS 窗口焦点控制不属于当前实现。
+> 状态：已经实现 MCP 工具和模拟驱动单元测试；**模拟测试通过；Mac 真实截图与鼠标点击已验证，键盘输入闭环继续验收；Tang 尚未验证**。Linux Wayland、多显示器、锁屏/无 GUI、任意浏览器 DOM、GUI 密码输入、原生 macOS 窗口焦点控制不属于当前实现。
 
 ## 功能与架构
 
@@ -78,7 +78,7 @@ DC_COMPUTER_PYTHON = "/绝对路径/DesktopCommanderMCP/.venv-computer/bin/pytho
 
 如果要首先只验证截图，可暂时去掉 `DC_COMPUTER_INPUT`。客户端重连后，先调用 `computer_screen_info`、`computer_screenshot`。必须亲眼确认画面正确，再在**非敏感测试窗口**尝试点击。
 
-**注意：** `computer_type` 对 ASCII 使用键盘输入；对中文等 Unicode 采用系统**纯文本剪贴板临时替换并恢复**。这会损失原剪贴板的富文本/图片格式，其他同时使用剪贴板的程序也可能发生竞争。不要用它输入密码、令牌或其他秘密。
+**注意：** Mac 的中文/日文输入法可能将常规模拟按键留在候选/组合状态；本扩展对可打印 ASCII 采用 Quartz Unicode 键盘事件直接提交，对中文、emoji、多行文字等使用系统**纯文本剪贴板临时替换并恢复**。后者会损失原剪贴板的富文本/图片格式，且存在与其他程序的剪贴板竞争。带坐标的 `computer_type` 在 macOS 上会核对点击坐标下的窗口所有者是否成为前台应用，否则拒绝发出键盘输入，以防误输到其他窗口。不要用它输入密码、令牌或其他秘密。
 
 ## 安装：Linux（Tang）
 
