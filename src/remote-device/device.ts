@@ -614,7 +614,10 @@ export class MCPDevice {
         // Count every targeted delivery, including duplicates, before the local claim.
         observeTransport({ stage: 'device_call_received', ...observation });
         
-        console.log(`🔧 Received tool call ${call_id}: ${tool_name} ${JSON.stringify(tool_args)} metadata: ${JSON.stringify(metadata)}`);
+        // Never log Computer Use typed text or screenshot payloads on the remote device.
+        const safeToolArgs = tool_name === 'computer_type'
+            ? { ...tool_args, text: '[REDACTED]' } : tool_args;
+        console.log(`🔧 Received tool call ${call_id}: ${tool_name} ${JSON.stringify(safeToolArgs)} metadata: ${JSON.stringify(metadata)}`);
 
         // LOCAL claim first — this is the authoritative guard against executing
         // a call twice. During the transition both transports deliver every call
@@ -676,7 +679,9 @@ export class MCPDevice {
             return;
         }
 
-        console.log(`✅ Tool call ${tool_name} completed:\r\n ${JSON.stringify(result)}`);
+        console.log(tool_name.startsWith('computer_')
+            ? `✅ Tool call ${tool_name} completed (GUI result omitted from device logs)`
+            : `✅ Tool call ${tool_name} completed:\\r\\n ${JSON.stringify(result)}`);
 
         // The tool ran. A result that can't be saved is reported and written as
         // failed, as before, but its telemetry stays "tool_call_completed"
