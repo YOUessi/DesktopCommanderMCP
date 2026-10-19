@@ -66,7 +66,8 @@
     "logs:export": "npm run build && node scripts/export-fuzzy-logs.js",
     "count-tokens": "npm run build && node scripts/count-tokens.js",
     "count-tokens:json": "npm run build && node scripts/count-tokens.js --json",
-    "test:computer": "npm run build && node --test test/test-computer-use.js test/test-computer-mcp.js"
+    "test:computer": "npm run build && python3 -m py_compile src/computer-use/bridge.py && node --test test/test-computer-use.js test/test-computer-mcp.js",
+    "test:computer:live": "npm run build && node scripts/test-computer-live.mjs"
   },
   "publishConfig": {
     "access": "public"
