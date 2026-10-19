@@ -48,12 +48,29 @@ def clipboard_command(platform_name: str):
 
 
 def write_text(gui, text: str) -> None:
-    if text.isascii():
+    if platform.system() == "Darwin" and all(32 <= ord(char) <= 126 for char in text):
+        # macOS IMEs can hold PyAutoGUI.write() keycodes as uncommitted text until
+        # Return is pressed. Post explicit Unicode key events instead: they reach
+        # text fields without triggering the active Japanese/Chinese IME.
+        # Keep chunks small for CGEventKeyboardSetUnicodeString's event buffer.
+        import Quartz
+        for start in range(0, len(text), 16):
+            piece = text[start:start + 16]
+            down = Quartz.CGEventCreateKeyboardEvent(None, 0, True)
+            up = Quartz.CGEventCreateKeyboardEvent(None, 0, False)
+            Quartz.CGEventKeyboardSetUnicodeString(down, len(piece), piece)
+            Quartz.CGEventKeyboardSetUnicodeString(up, len(piece), piece)
+            Quartz.CGEventPost(Quartz.kCGHIDEventTap, down)
+            time.sleep(0.015)
+            Quartz.CGEventPost(Quartz.kCGHIDEventTap, up)
+            time.sleep(0.015)
+        return
+    if platform.system() != "Darwin" and text.isascii():
         gui.write(text, interval=0.004)
         return
-    # PyAutoGUI.write() is designed for keyboard keys, not arbitrary Unicode.
-    # Temporarily replace the plain-text clipboard and restore its *text*.
-    # This does NOT preserve rich clipboard formats; see docs/COMPUTER_USE.md.
+    # Non-ASCII / multiline text: temporarily replace the plain-text clipboard
+    # and restore its *text*. Rich clipboard formats are not preserved;
+    # see docs/COMPUTER_USE.md.
     read_cmd, write_cmd, paste_keys = clipboard_command(platform.system())
     old = subprocess.run(read_cmd, capture_output=True, check=True, timeout=4).stdout
     try:
