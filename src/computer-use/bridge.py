@@ -124,7 +124,8 @@ def write_text(gui, text: str, expected_pid: int = 0) -> None:
     old = subprocess.run(read_cmd, capture_output=True, check=True, timeout=4).stdout
     try:
         subprocess.run(write_cmd, input=text.encode("utf-8"), check=True, timeout=4)
-        ensure_foreground(expected_pid)\n        gui.hotkey(*paste_keys)
+        ensure_foreground(expected_pid)
+        gui.hotkey(*paste_keys)
         time.sleep(0.25)
     finally:
         subprocess.run(write_cmd, input=old, check=True, timeout=4)
