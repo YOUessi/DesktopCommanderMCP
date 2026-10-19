@@ -190,7 +190,13 @@ export class ComputerController {
         Object.assign(payload, { action: 'click', ...imagePointToDesktop(frame, data.x, data.y),
           button: data.button, clicks: data.clicks });
       } else if (name === 'computer_type') {
-        Object.assign(payload, { action: 'type', text: data.text });
+        if ((data.x === undefined) !== (data.y === undefined)) {
+          throw new Error('Provide both x and y to target a text field, or neither');
+        }
+        const target = data.x !== undefined
+          ? imagePointToDesktop(frame, data.x, data.y)
+          : {};
+        Object.assign(payload, { action: 'type', text: data.text, ...target });
       } else if (name === 'computer_key') {
         Object.assign(payload, { action: 'key', keys: data.keys });
       } else if (name === 'computer_scroll') {
